@@ -10,17 +10,19 @@ uploaded_file = st.file_uploader("Upload your CSV", type=["csv"])
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
+    # FIX DATA
     df = df.replace("-", 0)
-   df = df.replace("-", 0)
 
-for col in df.columns:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
+    for col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
 
-df = df.fillna(0)
+    df = df.fillna(0)
 
+    # TIME ON ICE → minutes
     if "Time on ice" in df.columns:
         df["TOI_min"] = pd.to_timedelta(df["Time on ice"]).dt.total_seconds() / 60
 
+    # PER 60
     def per60(col):
         return df[col] / df["TOI_min"] * 60
 
@@ -28,15 +30,18 @@ df = df.fillna(0)
         if col in df.columns:
             df[col + "_per60"] = per60(col)
 
+    # xG impact
     if "Team xG when on ice" in df.columns and "Opponent's xG when on ice" in df.columns:
         df["xG impact"] = df["Team xG when on ice"] - df["Opponent's xG when on ice"]
 
+    # PERCENTILES
     def pct(series):
         return series.rank(pct=True)
 
     for col in df.select_dtypes(include="number").columns:
         df[col + "_pct"] = pct(df[col])
 
+    # CATEGORIES
     def avg(cols):
         cols = [c for c in cols if c in df.columns]
         return df[cols].mean(axis=1)
@@ -45,8 +50,9 @@ df = df.fillna(0)
     df["Transition"] = avg(["xG impact_pct", "CORSI for, %_pct"])
     df["Defence"] = avg(["Blocked shots_per60_pct"])
 
-    df["Total"] = 0.4*df["Offence"] + 0.4*df["Transition"] + 0.2*df["Defence"]
+    df["Total"] = 0.4 * df["Offence"] + 0.4 * df["Transition"] + 0.2 * df["Defence"]
 
+    # UI
     player = st.selectbox("Select Player", df["Player"])
 
     p = df[df["Player"] == player].iloc[0]
