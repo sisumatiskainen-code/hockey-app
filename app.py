@@ -11,7 +11,12 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
     df = df.replace("-", 0)
-    df = df.apply(pd.to_numeric, errors='ignore')
+   df = df.replace("-", 0)
+
+for col in df.columns:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+df = df.fillna(0)
 
     if "Time on ice" in df.columns:
         df["TOI_min"] = pd.to_timedelta(df["Time on ice"]).dt.total_seconds() / 60
